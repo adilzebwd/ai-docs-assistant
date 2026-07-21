@@ -1,0 +1,5 @@
+.env
+venv/
+__pycache__/
+*.pyc
+uploads/Hacking_Windows_XP_Hacking__PDFDrive_.pdf

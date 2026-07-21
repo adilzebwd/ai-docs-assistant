@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - AI Docs Assistant</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f4f5f7;
+            margin: 0;
+            padding: 60px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .panel {
+            width: 100%;
+            max-width: 420px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            padding: 28px;
+        }
+
+        h1 {
+            font-size: 18px;
+            margin: 0 0 20px;
+            color: #1f2937;
+        }
+
+        label {
+            font-size: 13px;
+            color: #4b5563;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        input[type="password"],
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 14px;
+        }
+
+        button {
+            width: 100%;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background: #93c5fd;
+            cursor: not-allowed;
+        }
+
+        .error {
+            background: #fef2f2;
+            color: #b91c1c;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 14px;
+        }
+
+        .status {
+            font-size: 13px;
+            color: #4b5563;
+            margin-top: 10px;
+        }
+
+        .logout {
+            display: inline-block;
+            margin-top: 16px;
+            font-size: 12px;
+            color: #6b7280;
+            text-decoration: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid #e0e0e0;
+            border-top-color: #4a90d9;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        #upload-status {
+            margin-top: 12px;
+            font-size: 14px;
+            color: #444;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        #upload-status {
+            margin-top: 12px;
+            font-size: 14px;
+            color: #444;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="panel">
+        {% if not logged_in %}
+        <h1>Admin Login</h1>
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+        <form method="POST" action="/admin/login">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+            <button type="submit">Log In</button>
+
+        </form>
+        {% else %}
+        <h1>Upload Document</h1>
+        <div class="status" id="currentDoc">Checking current document...</div>
+        <label for="fileInput">PDF or TXT file</label>
+        <input type="file" id="fileInput" accept=".pdf,.txt">
+        <button id="uploadBtn">Upload &amp; Process</button>
+        <div class="status" id="uploadStatus"></div>
+        <a class="logout" href="/admin/logout">Log out</a>
+
+        <script>
+            const fileInput = document.getElementById("fileInput");
+            const uploadBtn = document.getElementById("uploadBtn");
+            const uploadStatus = document.getElementById("uploadStatus");
+            const currentDoc = document.getElementById("currentDoc");
+
+            let activeDocument = null;
+
+            async function loadCurrentDocument() {
+                try {
+                    const response = await fetch("/current-document");
+                    const data = await response.json();
+                    activeDocument = data.filename;
+                    currentDoc.textContent = data.filename
+                        ? `Currently active: ${data.filename} (${data.chunk_count} chunks)`
+                        : "No document currently active.";
+                } catch (err) {
+                    currentDoc.textContent = "";
+                }
+            }
+
+            loadCurrentDocument();
+
+            uploadBtn.addEventListener("click", async () => {
+                const file = fileInput.files[0];
+                if (!file) {
+                    uploadStatus.textContent = "Choose a file first.";
+                    return;
+                }
+
+                if (activeDocument) {
+                    const confirmed = confirm(
+                        `This will replace the current document ("${activeDocument}") ` +
+                        `and the chatbot will no longer be able to answer questions about it. ` +
+                        `Continue with uploading "${file.name}"?`
+                    );
+                    if (!confirmed) {
+                        uploadStatus.textContent = "Upload cancelled.";
+                        return;
+                    }
+                }
+
+                const formData = new FormData();
+                formData.append("file", file);
+
+                uploadBtn.disabled = true;
+                uploadBtn.textContent = "Uploading...";
+                uploadStatus.innerHTML = '<span class="spinner"></span>Processing document... this can take a moment.';
+
+                try {
+                    const response = await fetch("/upload", {
+                        method: "POST",
+                        body: formData
+                    });
+                    const data = await response.json();
+
+                    uploadStatus.textContent = data.error
+                        ? "Error: " + data.error
+                        : data.message;
+
+                    if (!data.error) {
+                        loadCurrentDocument();
+                    }
+                } catch (err) {
+                    uploadStatus.textContent = "Upload failed. Please try again.";
+                } finally {
+                    uploadBtn.disabled = false;
+                }
+            });
+
+
+        </script>
+        {% endif %}
+    </div>
+
+</body>
+
+</html>
