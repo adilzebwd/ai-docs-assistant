@@ -26,7 +26,7 @@ CHAT_MODEL = "gpt-4o-mini"
 # If the best-matching chunk scores below this, we don't trust the
 # retrieval enough to let GPT answer -- we tell the user honestly
 # instead of risking a made-up answer.
-SIMILARITY_THRESHOLD = 0.35
+SIMILARITY_THRESHOLD = 0.25
 
 
 def build_prompt(question, chunks):
@@ -44,7 +44,7 @@ def build_prompt(question, chunks):
         "You are a helpful assistant that answers questions using ONLY the "
     "provided document excerpts below. Do not use any outside knowledge "
     "or facts not present in the excerpts. You may perform simple "
-    "arithmetic (percentages, sums, comparisons , numbering) using numbers explicitly "
+    "arithmetic (percentages, sums, comparisons) using numbers explicitly "
     "stated in the excerpts -- for example, if the text gives a maximum "
     "percentage of income and the user states their income, you should "
     "calculate the resulting figure. If the excerpts genuinely do not "
